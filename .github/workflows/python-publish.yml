@@ -7,7 +7,15 @@
 # documentation.
 
 name: Upload Python Package
-
+uses: softprops/action-gh-release@v1
+with:
+  name: Release ${{ github.ref_name }}
+  tag_name: ${{ github.ref_name }}
+  body: Auto-generated release
+  files: dist/*
+env:
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    
 on:
   push:
     tags:

@@ -9,11 +9,13 @@
 name: Upload Python Package
 
 on:
-  release:
-    types: [published]
+  push:
+    tags:
+      - "m*"  # 匹配v开头的标签，根据你git tag的命名规则设置
 
 permissions:
-  contents: read
+  contents: write
+  id-token: write
 
 jobs:
   release-build:

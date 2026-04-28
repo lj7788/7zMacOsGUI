@@ -22,14 +22,18 @@ jobs:
           python -m pip install --upgrade pip
           pip install pyqt5 pyinstaller
 
-      - name: Create resources directory
+      - name: Install p7zip
         run: |
-          mkdir -p src/resources
-          # Download 7z binaries or build from source
-          # For GitHub Actions, we need to install p7zip
           brew install p7zip
-          cp /usr/local/bin/7z src/resources/
-          cp /usr/local/lib/p7zip/7z.so src/resources/
+          mkdir -p src/resources
+          # For GitHub Actions, handle both Intel and Apple Silicon homebrew paths
+          if [ -f "/opt/homebrew/bin/7z" ]; then
+            cp /opt/homebrew/bin/7z src/resources/
+            cp /opt/homebrew/lib/p7zip/7z.so src/resources/
+          else
+            cp /usr/local/bin/7z src/resources/
+            cp /usr/local/lib/p7zip/7z.so src/resources/
+          fi
           chmod +x src/resources/7z
 
       - name: Build application

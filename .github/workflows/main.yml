@@ -30,8 +30,14 @@ jobs:
         run: |
           brew install p7zip
           mkdir -p src/resources
-          cp /usr/local/bin/7z src/resources/
-          cp /usr/local/lib/p7zip/7z.so src/resources/
+          # For GitHub Actions, p7zip is installed in /opt/homebrew
+          if [ -f "/opt/homebrew/bin/7z" ]; then
+            cp /opt/homebrew/bin/7z src/resources/
+            cp /opt/homebrew/lib/p7zip/7z.so src/resources/
+          else
+            cp /usr/local/bin/7z src/resources/
+            cp /usr/local/lib/p7zip/7z.so src/resources/
+          fi
           chmod +x src/resources/7z
 
       - name: Build application

@@ -1,0 +1,72 @@
+name: Build and Release macOS Application
+
+on:
+  push:
+    branches: [ main ]
+  release:
+    types: [ created ]
+
+permissions:
+  contents: read
+
+jobs:
+  build-macos:
+    runs-on: macos-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pyqt5 pyinstaller
+
+      - name: Install p7zip
+        run: |
+          brew install p7zip
+          mkdir -p src/resources
+          cp /usr/local/bin/7z src/resources/
+          cp /usr/local/lib/p7zip/7z.so src/resources/
+          chmod +x src/resources/7z
+
+      - name: Build application
+        run: |
+          pyinstaller --name "7Z GUI" --windowed --add-data "src/resources:resources" src/main.py
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: 7zGUI-macos
+          path: dist/7Z GUI.app
+
+      - name: Create DMG
+        if: github.event_name == 'release'
+        run: |
+          brew install create-dmg
+          create-dmg \
+            --volname "7Z GUI" \
+            --volicon "img/icon.icns" \
+            --window-pos 200 120 \
+            --window-size 800 400 \
+            --icon-size 100 \
+            --icon "7Z GUI.app" 200 190 \
+            --hide-extension "7Z GUI.app" \
+            --app-drop-link 600 185 \
+            "7Z GUI.dmg" \
+            "dist/"
+
+      - name: Upload to Release
+        if: github.event_name == 'release'
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: ./7Z GUI.dmg
+          asset_name: 7Z GUI.dmg
+          asset_content_type: application/x-apple-diskimage

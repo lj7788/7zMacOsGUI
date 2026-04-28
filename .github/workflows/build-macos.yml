@@ -1,0 +1,43 @@
+name: Build macOS Application
+
+on: [push]
+
+permissions:
+  contents: read
+
+jobs:
+  build-macos:
+    runs-on: macos-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pyqt5 pyinstaller
+
+      - name: Create resources directory
+        run: |
+          mkdir -p src/resources
+          # Download 7z binaries or build from source
+          # For GitHub Actions, we need to install p7zip
+          brew install p7zip
+          cp /usr/local/bin/7z src/resources/
+          cp /usr/local/lib/p7zip/7z.so src/resources/
+          chmod +x src/resources/7z
+
+      - name: Build application
+        run: |
+          pyinstaller --name "7Z GUI" --windowed --add-data "src/resources:resources" src/main.py
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: 7zGUI-macos
+          path: dist/7Z GUI.app

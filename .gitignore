@@ -54,5 +54,5 @@ Temporary Items
 *.orig
 
 # Resources (if not needed in repo)
-src/resources/7z
-src/resources/7z.so
+#src/resources/7z
+#src/resources/7z.so

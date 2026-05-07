@@ -49,6 +49,15 @@ def get_resource_path(relative_path):
         base_path = sys._MEIPASS
     except Exception:
         base_path = os.path.dirname(os.path.abspath(__file__))
+    
+    resources_path = os.path.join(base_path, relative_path)
+    if os.path.exists(resources_path):
+        return resources_path
+    
+    resources_path = os.path.join(base_path, "Resources", relative_path)
+    if os.path.exists(resources_path):
+        return resources_path
+    
     return os.path.join(base_path, relative_path)
 
 def find_7z_path():
@@ -58,21 +67,27 @@ def find_7z_path():
         os.chmod(bundled_path, 0o755)
         return bundled_path
     
-    common_paths = [
-        "7z",
+    possible_paths = [
+        os.path.join(os.path.dirname(sys.executable), "resources", "7z"),
+        os.path.join(os.path.dirname(sys.executable), "..", "Frameworks", "resources", "7z"),
+        os.path.expanduser("~/homebrew/bin/7z"),
         "/opt/homebrew/bin/7z",
         "/usr/local/bin/7z",
         "/usr/bin/7z",
         "/bin/7z",
-        os.path.expanduser("~/homebrew/bin/7z")
     ]
     
-    for path in common_paths:
-        try:
-            subprocess.run([path, "--help"], capture_output=True)
+    for path in possible_paths:
+        if os.path.exists(path) and os.access(path, os.X_OK):
             return path
-        except FileNotFoundError:
-            continue
+    
+    try:
+        result = subprocess.run(["7z", "--help"], capture_output=True)
+        if result.returncode == 0:
+            return "7z"
+    except FileNotFoundError:
+        pass
+    
     return None
 
 class SevenZipGUI(QMainWindow):
@@ -270,6 +285,14 @@ class SevenZipGUI(QMainWindow):
                 return False
         return len(self.files_to_process) > 0
     
+    def get_current_mode(self):
+        if self.unzip_radio.isChecked():
+            return "extract"
+        elif self.zip_radio.isChecked():
+            return "compress"
+        else:
+            return "auto"
+    
     def auto_set_output_path(self):
         if not self.files_to_process:
             return
@@ -280,7 +303,14 @@ class SevenZipGUI(QMainWindow):
         if not parent_dir:
             parent_dir = os.path.expanduser("~/Desktop")
         
-        self.output_path.setText(parent_dir)
+        mode = self.get_current_mode()
+        
+        if mode == "extract" or (mode == "auto" and is_archive_file(first_path)):
+            base_name = os.path.splitext(os.path.basename(first_path))[0]
+            output_dir = os.path.join(parent_dir, base_name)
+            self.output_path.setText(output_dir)
+        else:
+            self.output_path.setText(parent_dir)
 
     def remove_selected(self):
         for item in self.file_list.selectedItems():
@@ -356,7 +386,7 @@ class SevenZipGUI(QMainWindow):
         archive_path = self.files_to_process[0]
         password = self.password_edit.text()
         
-        cmd = [self.seven_zip_path, "x", archive_path, f"-o{output_dir}"]
+        cmd = [self.seven_zip_path, "x", archive_path, f"-o{output_dir}", "-y"]
         
         if password:
             cmd.append(f"-p{password}")
